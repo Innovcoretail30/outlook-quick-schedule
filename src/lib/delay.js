@@ -327,15 +327,55 @@
     return DEFAULT_TIMEZONE;
   }
 
-  function serializeSchedule(preset) {
+  function itemFingerprint(item) {
+    if (!item || typeof item !== "object") {
+      return { itemId: "", conversationId: "" };
+    }
+    return {
+      itemId: String(item.itemId || ""),
+      conversationId: String(item.conversationId || "")
+    };
+  }
+
+  function isComposeSurface(item) {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+    if (item.surface === "read") {
+      return false;
+    }
+    if (item.surface === "compose") {
+      return true;
+    }
+    return item.sessionData != null || item._compose === true;
+  }
+
+  function fingerprintsMatch(intended, current) {
+    var a = itemFingerprint(intended);
+    var b = itemFingerprint(current);
+    if (a.itemId && b.itemId) {
+      return a.itemId === b.itemId;
+    }
+    return true;
+  }
+
+  function serializeSchedule(preset, meta) {
     var clean = normalizePreset(preset);
     if (!clean) {
       return "";
     }
-    return JSON.stringify({ v: 1, preset: clean });
+    meta = meta || {};
+    return JSON.stringify({
+      v: 2,
+      preset: clean,
+      chosenAt: meta.chosenAt || Date.now(),
+      nonce: meta.nonce || newId(),
+      itemId: meta.itemId || "",
+      conversationId: meta.conversationId || ""
+    });
   }
 
-  function parseSchedule(raw) {
+  function parseStoredSchedule(raw) {
     if (!raw) {
       return null;
     }
@@ -344,10 +384,106 @@
       if (!data || data.cleared) {
         return null;
       }
-      return normalizePreset(data.preset || data);
+      var preset = normalizePreset(data.preset || (data.kind ? data : null));
+      if (!preset) {
+        return null;
+      }
+      return {
+        v: Number(data.v) || 1,
+        preset: preset,
+        chosenAt: Number(data.chosenAt) || 0,
+        nonce: String(data.nonce || ""),
+        itemId: String(data.itemId || ""),
+        conversationId: String(data.conversationId || "")
+      };
     } catch (e) {
       return null;
     }
+  }
+
+  function scheduleAppliesToItem(stored, currentItem) {
+    if (!stored || !stored.preset) {
+      return null;
+    }
+    if (!isComposeSurface(currentItem)) {
+      return null;
+    }
+    var fp = itemFingerprint(currentItem);
+    if (stored.itemId && fp.itemId && stored.itemId !== fp.itemId) {
+      return null;
+    }
+    return stored.preset;
+  }
+
+  function parseSchedule(raw, currentItem) {
+    var stored = parseStoredSchedule(raw);
+    if (!stored) {
+      return null;
+    }
+    if (currentItem) {
+      return scheduleAppliesToItem(stored, currentItem);
+    }
+    return stored.preset;
+  }
+
+  /**
+   * Single write policy. Select/read/itemChanged must never write.
+   * customProperties are ignored even if a parent message left them behind.
+   */
+  function planWrites(event) {
+    var empty = {
+      writes: [],
+      allowEvent: true,
+      applyDelay: false,
+      preset: null
+    };
+    if (!event || typeof event !== "object") {
+      return empty;
+    }
+    var type = event.type;
+    if (type === "select" || type === "read" || type === "itemChanged") {
+      return empty;
+    }
+    var item = event.item;
+    if (type === "send") {
+      if (!isComposeSurface(item)) {
+        return empty;
+      }
+      var preset = scheduleAppliesToItem(parseStoredSchedule(event.sessionData), item);
+      if (!preset) {
+        return empty;
+      }
+      return {
+        writes: ["delayDeliveryTime.set", "sessionData.remove"],
+        allowEvent: true,
+        applyDelay: true,
+        preset: preset
+      };
+    }
+    if (type === "composeClick") {
+      if (!isComposeSurface(item)) {
+        return empty;
+      }
+      if (event.action === "clear") {
+        return {
+          writes: ["sessionData.remove", "notification"],
+          allowEvent: true,
+          applyDelay: false,
+          preset: null
+        };
+      }
+      var chosen = normalizePreset(event.preset);
+      if (!chosen) {
+        return empty;
+      }
+      return {
+        writes: ["sessionData.set", "notification"],
+        allowEvent: true,
+        applyDelay: false,
+        preset: chosen
+      };
+    }
+    return empty;
   }
 
   return {
@@ -378,7 +514,13 @@
     humanOffset: humanOffset,
     resolveTimeZone: resolveTimeZone,
     serializeSchedule: serializeSchedule,
+    parseStoredSchedule: parseStoredSchedule,
     parseSchedule: parseSchedule,
+    scheduleAppliesToItem: scheduleAppliesToItem,
+    itemFingerprint: itemFingerprint,
+    isComposeSurface: isComposeSurface,
+    fingerprintsMatch: fingerprintsMatch,
+    planWrites: planWrites,
     pad2: pad2
   };
 });

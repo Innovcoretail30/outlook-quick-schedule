@@ -328,15 +328,55 @@
     return DEFAULT_TIMEZONE;
   }
 
-  function serializeSchedule(preset) {
+  function itemFingerprint(item) {
+    if (!item || typeof item !== "object") {
+      return { itemId: "", conversationId: "" };
+    }
+    return {
+      itemId: String(item.itemId || ""),
+      conversationId: String(item.conversationId || "")
+    };
+  }
+
+  function isComposeSurface(item) {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+    if (item.surface === "read") {
+      return false;
+    }
+    if (item.surface === "compose") {
+      return true;
+    }
+    return item.sessionData != null || item._compose === true;
+  }
+
+  function fingerprintsMatch(intended, current) {
+    var a = itemFingerprint(intended);
+    var b = itemFingerprint(current);
+    if (a.itemId && b.itemId) {
+      return a.itemId === b.itemId;
+    }
+    return true;
+  }
+
+  function serializeSchedule(preset, meta) {
     var clean = normalizePreset(preset);
     if (!clean) {
       return "";
     }
-    return JSON.stringify({ v: 1, preset: clean });
+    meta = meta || {};
+    return JSON.stringify({
+      v: 2,
+      preset: clean,
+      chosenAt: meta.chosenAt || Date.now(),
+      nonce: meta.nonce || newId(),
+      itemId: meta.itemId || "",
+      conversationId: meta.conversationId || ""
+    });
   }
 
-  function parseSchedule(raw) {
+  function parseStoredSchedule(raw) {
     if (!raw) {
       return null;
     }
@@ -345,10 +385,106 @@
       if (!data || data.cleared) {
         return null;
       }
-      return normalizePreset(data.preset || data);
+      var preset = normalizePreset(data.preset || (data.kind ? data : null));
+      if (!preset) {
+        return null;
+      }
+      return {
+        v: Number(data.v) || 1,
+        preset: preset,
+        chosenAt: Number(data.chosenAt) || 0,
+        nonce: String(data.nonce || ""),
+        itemId: String(data.itemId || ""),
+        conversationId: String(data.conversationId || "")
+      };
     } catch (e) {
       return null;
     }
+  }
+
+  function scheduleAppliesToItem(stored, currentItem) {
+    if (!stored || !stored.preset) {
+      return null;
+    }
+    if (!isComposeSurface(currentItem)) {
+      return null;
+    }
+    var fp = itemFingerprint(currentItem);
+    if (stored.itemId && fp.itemId && stored.itemId !== fp.itemId) {
+      return null;
+    }
+    return stored.preset;
+  }
+
+  function parseSchedule(raw, currentItem) {
+    var stored = parseStoredSchedule(raw);
+    if (!stored) {
+      return null;
+    }
+    if (currentItem) {
+      return scheduleAppliesToItem(stored, currentItem);
+    }
+    return stored.preset;
+  }
+
+  /**
+   * Single write policy. Select/read/itemChanged must never write.
+   * customProperties are ignored even if a parent message left them behind.
+   */
+  function planWrites(event) {
+    var empty = {
+      writes: [],
+      allowEvent: true,
+      applyDelay: false,
+      preset: null
+    };
+    if (!event || typeof event !== "object") {
+      return empty;
+    }
+    var type = event.type;
+    if (type === "select" || type === "read" || type === "itemChanged") {
+      return empty;
+    }
+    var item = event.item;
+    if (type === "send") {
+      if (!isComposeSurface(item)) {
+        return empty;
+      }
+      var preset = scheduleAppliesToItem(parseStoredSchedule(event.sessionData), item);
+      if (!preset) {
+        return empty;
+      }
+      return {
+        writes: ["delayDeliveryTime.set", "sessionData.remove"],
+        allowEvent: true,
+        applyDelay: true,
+        preset: preset
+      };
+    }
+    if (type === "composeClick") {
+      if (!isComposeSurface(item)) {
+        return empty;
+      }
+      if (event.action === "clear") {
+        return {
+          writes: ["sessionData.remove", "notification"],
+          allowEvent: true,
+          applyDelay: false,
+          preset: null
+        };
+      }
+      var chosen = normalizePreset(event.preset);
+      if (!chosen) {
+        return empty;
+      }
+      return {
+        writes: ["sessionData.set", "notification"],
+        allowEvent: true,
+        applyDelay: false,
+        preset: chosen
+      };
+    }
+    return empty;
   }
 
   return {
@@ -379,7 +515,13 @@
     humanOffset: humanOffset,
     resolveTimeZone: resolveTimeZone,
     serializeSchedule: serializeSchedule,
+    parseStoredSchedule: parseStoredSchedule,
     parseSchedule: parseSchedule,
+    scheduleAppliesToItem: scheduleAppliesToItem,
+    itemFingerprint: itemFingerprint,
+    isComposeSurface: isComposeSurface,
+    fingerprintsMatch: fingerprintsMatch,
+    planWrites: planWrites,
     pad2: pad2
   };
 });
@@ -387,6 +529,9 @@
 /**
  * Office.js helpers for choosing a delay and applying it on Send.
  * Concatenated into launchevent.js after delay.js. Uses global QuickSchedule.
+ *
+ * Writes are allowed only after an explicit compose button click, or in
+ * OnMessageSend for that same compose item. Select/read must never write.
  */
 (function (root) {
   "use strict";
@@ -429,21 +574,33 @@
     }
   }
 
-  function withItem(cb, onMissing) {
+  function currentItem() {
     try {
-      var item = Office.context && Office.context.mailbox && Office.context.mailbox.item;
-      if (!item) {
-        if (onMissing) {
-          onMissing(new Error("No compose item."));
-        }
-        return;
-      }
-      cb(item);
+      return Office.context && Office.context.mailbox && Office.context.mailbox.item;
     } catch (e) {
-      if (onMissing) {
-        onMissing(e);
-      }
+      return null;
     }
+  }
+
+  function isComposeItem(item) {
+    if (!item) {
+      return false;
+    }
+    if (!item.sessionData) {
+      return false;
+    }
+    return true;
+  }
+
+  function withComposeItem(cb, onMissing) {
+    var item = currentItem();
+    if (!isComposeItem(item)) {
+      if (onMissing) {
+        onMissing(new Error("Not a compose item."));
+      }
+      return;
+    }
+    cb(item);
   }
 
   function once(fn) {
@@ -459,25 +616,15 @@
     };
   }
 
-  function getCustomProperties(item, callback) {
-    if (!item.loadCustomPropertiesAsync) {
-      callback(null);
-      return;
-    }
-    item.loadCustomPropertiesAsync(function (result) {
-      if (!result || result.status === Office.AsyncResultStatus.Failed) {
-        callback(null);
-        return;
-      }
-      callback(result.value);
-    });
+  function stillIntended(intended) {
+    var item = currentItem();
+    return isComposeItem(item) && QS.fingerprintsMatch(intended, item);
   }
 
   function canUseSessionData(item) {
     return (
       mailboxSet("1.11") &&
-      item &&
-      item.sessionData &&
+      isComposeItem(item) &&
       typeof item.sessionData.getAsync === "function" &&
       typeof item.sessionData.setAsync === "function"
     );
@@ -489,35 +636,18 @@
 
   function readSchedule(callback) {
     var done = once(callback);
-    withItem(
+    withComposeItem(
       function (item) {
-        function fromCustom() {
-          getCustomProperties(item, function (props) {
-            if (!props) {
-              done(null);
-              return;
-            }
-            try {
-              done(QS.parseSchedule(props.get(QS.CUSTOM_PROP_KEY)));
-            } catch (e) {
-              done(null);
-            }
-          });
-        }
-
         if (!canUseSessionData(item)) {
-          fromCustom();
+          done(null);
           return;
         }
         item.sessionData.getAsync(QS.SESSION_KEY, function (result) {
-          if (result && result.status !== Office.AsyncResultStatus.Failed) {
-            var parsed = QS.parseSchedule(result.value);
-            if (parsed) {
-              done(parsed);
-              return;
-            }
+          if (!result || result.status === Office.AsyncResultStatus.Failed) {
+            done(null);
+            return;
           }
-          fromCustom();
+          done(QS.parseSchedule(result.value, item));
         });
       },
       function () {
@@ -526,67 +656,37 @@
     );
   }
 
-  function writeCustom(item, value, done) {
-    getCustomProperties(item, function (props) {
-      if (!props) {
-        done();
-        return;
-      }
-      try {
-        if (value) {
-          props.set(QS.CUSTOM_PROP_KEY, value);
-        } else if (props.remove) {
-          props.remove(QS.CUSTOM_PROP_KEY);
-        } else {
-          props.set(QS.CUSTOM_PROP_KEY, "");
-        }
-        props.saveAsync(function () {
+  function writeSession(item, payload, done) {
+    if (!canUseSessionData(item)) {
+      done();
+      return;
+    }
+    try {
+      if (payload) {
+        item.sessionData.setAsync(QS.SESSION_KEY, payload, function () {
           done();
         });
-      } catch (e) {
-        done();
+      } else if (typeof item.sessionData.removeAsync === "function") {
+        item.sessionData.removeAsync(QS.SESSION_KEY, function () {
+          done();
+        });
+      } else {
+        item.sessionData.setAsync(QS.SESSION_KEY, "", function () {
+          done();
+        });
       }
-    });
-  }
-
-  function writeSchedule(preset, callback) {
-    var payload = preset ? QS.serializeSchedule(preset) : "";
-    var done = once(callback);
-    later(done, 2500);
-    withItem(
-      function (item) {
-        var pending = 2;
-        function finish() {
-          pending -= 1;
-          if (pending <= 0) {
-            done();
-          }
-        }
-
-        if (canUseSessionData(item)) {
-          try {
-            if (payload) {
-              item.sessionData.setAsync(QS.SESSION_KEY, payload, finish);
-            } else if (typeof item.sessionData.removeAsync === "function") {
-              item.sessionData.removeAsync(QS.SESSION_KEY, finish);
-            } else {
-              item.sessionData.setAsync(QS.SESSION_KEY, "", finish);
-            }
-          } catch (e) {
-            finish();
-          }
-        } else {
-          finish();
-        }
-        writeCustom(item, payload, finish);
-      },
-      function () {
-        done();
-      }
-    );
+    } catch (e) {
+      done();
+    }
   }
 
   function replaceInfoNotification(item, message, persistent, done) {
+    if (!canNotify(item)) {
+      if (done) {
+        done();
+      }
+      return;
+    }
     try {
       item.notificationMessages.replaceAsync(
         QS.NOTIFICATION_KEY,
@@ -609,17 +709,53 @@
     }
   }
 
-  function showChosenNotification(preset, callback) {
+  function writeSchedule(preset, callback) {
     var done = once(callback);
     later(done, 2500);
-    withItem(
+    withComposeItem(
       function (item) {
-        if (!canNotify(item)) {
+        var plan = QS.planWrites({
+          type: "composeClick",
+          action: preset ? "choose" : "clear",
+          item: { surface: "compose", itemId: item.itemId, conversationId: item.conversationId, sessionData: true },
+          preset: preset
+        });
+        if (!plan.writes.length) {
           done();
           return;
         }
-        var copy = QS.describeScheduledBar(preset, new Date());
-        replaceInfoNotification(item, copy.message, true, done);
+        var intended = QS.itemFingerprint(item);
+        var payload = preset
+          ? QS.serializeSchedule(preset, {
+              itemId: intended.itemId,
+              conversationId: intended.conversationId
+            })
+          : "";
+        writeSession(item, payload, function () {
+          if (!stillIntended(intended)) {
+            done();
+            return;
+          }
+          var live = currentItem();
+          if (preset) {
+            replaceInfoNotification(live, QS.describeScheduledBar(preset, new Date()).message, true, done);
+          } else {
+            replaceInfoNotification(live, QS.CLEARED_MESSAGE, false, done);
+          }
+        });
+      },
+      function () {
+        done();
+      }
+    );
+  }
+
+  function showChosenNotification(preset, callback) {
+    var done = once(callback);
+    later(done, 2500);
+    withComposeItem(
+      function (item) {
+        replaceInfoNotification(item, QS.describeScheduledBar(preset, new Date()).message, true, done);
       },
       function () {
         done();
@@ -630,52 +766,9 @@
   function showClearedNotification(callback) {
     var done = once(callback);
     later(done, 2500);
-    withItem(
+    withComposeItem(
       function (item) {
-        if (!canNotify(item)) {
-          done();
-          return;
-        }
         replaceInfoNotification(item, CLEARED_MESSAGE, false, done);
-      },
-      function () {
-        done();
-      }
-    );
-  }
-
-  function restoreScheduledNotification(callback) {
-    readSchedule(function (preset) {
-      if (!preset) {
-        if (callback) {
-          callback(null);
-        }
-        return;
-      }
-      showChosenNotification(preset, function () {
-        if (callback) {
-          callback(preset);
-        }
-      });
-    });
-  }
-
-  function clearDelayDeliveryTime(callback) {
-    var done = once(callback);
-    later(done, 2500);
-    withItem(
-      function (item) {
-        if (!mailboxSet("1.13") || !item.delayDeliveryTime || !item.delayDeliveryTime.setAsync) {
-          done();
-          return;
-        }
-        try {
-          item.delayDeliveryTime.setAsync(new Date(0), function () {
-            done();
-          });
-        } catch (e) {
-          done();
-        }
       },
       function () {
         done();
@@ -725,23 +818,17 @@
       return;
     }
     writeSchedule(clean, function () {
-      showChosenNotification(clean, function () {
-        if (onDone) {
-          onDone(null, clean);
-        }
-      });
+      if (onDone) {
+        onDone(null, clean);
+      }
     });
   }
 
   function clearSchedule(onDone) {
     writeSchedule(null, function () {
-      clearDelayDeliveryTime(function () {
-        showClearedNotification(function () {
-          if (onDone) {
-            onDone();
-          }
-        });
-      });
+      if (onDone) {
+        onDone();
+      }
     });
   }
 
@@ -781,44 +868,49 @@
       finish({ allowEvent: true });
     }, 5000);
     try {
-      readSchedule(function (preset) {
-        if (!preset) {
+      var item = currentItem();
+      if (!isComposeItem(item) || !canUseSessionData(item)) {
+        finish({ allowEvent: true });
+        return;
+      }
+      item.sessionData.getAsync(QS.SESSION_KEY, function (result) {
+        var raw = result && result.status !== Office.AsyncResultStatus.Failed ? result.value : "";
+        var live = currentItem();
+        var plan = QS.planWrites({
+          type: "send",
+          item: {
+            surface: "compose",
+            itemId: live && live.itemId,
+            conversationId: live && live.conversationId,
+            sessionData: true
+          },
+          sessionData: raw,
+          customProperties: null
+        });
+        if (!plan.applyDelay) {
+          finish({ allowEvent: true });
+          return;
+        }
+        if (!stillIntended(live)) {
           finish({ allowEvent: true });
           return;
         }
         var when;
         try {
-          when = QS.applyPresetToDate(preset, new Date(), officeTimeZone());
-        } catch (e) {
-          finish({
-            allowEvent: true,
-            errorMessage: "Quick Schedule Send could not calculate the delay. The message will send now."
-          });
-          return;
-        }
-
-        var item;
-        try {
-          item = Office.context.mailbox.item;
+          when = QS.applyPresetToDate(plan.preset, new Date(), officeTimeZone());
         } catch (e) {
           finish({ allowEvent: true });
           return;
         }
-        if (!mailboxSet("1.13") || !item.delayDeliveryTime || !item.delayDeliveryTime.setAsync) {
-          finish({
-            allowEvent: true,
-            errorMessage: "This Outlook build cannot set delayDeliveryTime (Mailbox 1.13). The message will send now."
-          });
+        if (!mailboxSet("1.13") || !live.delayDeliveryTime || !live.delayDeliveryTime.setAsync) {
+          finish({ allowEvent: true });
           return;
         }
-
-        item.delayDeliveryTime.setAsync(when, function (result) {
-          if (result && result.status === Office.AsyncResultStatus.Failed) {
-            finish({
-              allowEvent: true,
-              errorMessage:
-                "Quick Schedule Send could not set delayed delivery. The message will send now. " +
-                (result.error && result.error.message ? result.error.message : "")
+        live.delayDeliveryTime.setAsync(when, function () {
+          var after = currentItem();
+          if (isComposeItem(after) && canUseSessionData(after) && QS.fingerprintsMatch(live, after)) {
+            writeSession(after, "", function () {
+              finish({ allowEvent: true });
             });
             return;
           }
@@ -836,6 +928,10 @@
     };
     later(finish, 4000);
     try {
+      if (!isComposeItem(currentItem())) {
+        finish();
+        return;
+      }
       var presets = readRoamingPresets();
       var preset = presets[slotIndex] || QS.DEFAULT_PRESETS[slotIndex];
       choosePreset(preset, function () {
@@ -852,6 +948,10 @@
     };
     later(finish, 4000);
     try {
+      if (!isComposeItem(currentItem())) {
+        finish();
+        return;
+      }
       clearSchedule(function () {
         finish();
       });
@@ -868,7 +968,6 @@
     clearSchedule: clearSchedule,
     showChosenNotification: showChosenNotification,
     showClearedNotification: showClearedNotification,
-    restoreScheduledNotification: restoreScheduledNotification,
     readRoamingPresets: readRoamingPresets,
     saveRoamingPresets: saveRoamingPresets,
     applyDelayOnSend: applyDelayOnSend,

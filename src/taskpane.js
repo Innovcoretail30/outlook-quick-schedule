@@ -118,12 +118,7 @@
     }
 
     if (inOffice) {
-      QuickScheduleOffice.readSchedule(function (preset) {
-        paint(preset);
-        if (preset) {
-          QuickScheduleOffice.restoreScheduledNotification();
-        }
-      });
+      QuickScheduleOffice.readSchedule(paint);
       return;
     }
     try {
@@ -289,23 +284,6 @@
     return QS.normalizePreset(raw);
   }
 
-  function handleContext(raw) {
-    if (!raw) {
-      return;
-    }
-    var data = raw;
-    if (typeof raw === "string") {
-      try {
-        data = JSON.parse(raw);
-      } catch (e) {
-        data = {};
-      }
-    }
-    if (data && data.action === "clear") {
-      clearChosen();
-    }
-  }
-
   function wire() {
     els.clearBtn.addEventListener("click", clearChosen);
     els.addNewBtn.addEventListener("click", function () {
@@ -394,22 +372,6 @@
       setStatus("error", "Could not read this draft’s schedule. You can still choose a delay.");
     }
 
-    try {
-      Office.context.mailbox.item.getInitializationContextAsync(function (result) {
-        if (result.status !== Office.AsyncResultStatus.Failed) {
-          handleContext(result.value);
-        }
-      });
-    } catch (e) {
-      /* older clients */
-    }
-    try {
-      Office.context.mailbox.addHandlerAsync(Office.EventType.InitializationContextChanged, function (eventArgs) {
-        handleContext(eventArgs && eventArgs.initializationContext);
-      });
-    } catch (e) {
-      /* optional */
-    }
   }
 
   wire();
