@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.24/MicrosoftTeams.schema.json",
   "manifestVersion": "1.24",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "id": "8f3c2a91-6e4b-4d17-9c58-2a7f0d1b6e44",
   "developer": {
     "name": "Innovation Schoolwear",
@@ -70,7 +70,8 @@
             { "id": "applyRibbon2h", "type": "executeFunction" },
             { "id": "applyRibbon3h", "type": "executeFunction" },
             { "id": "applyRibbon4h", "type": "executeFunction" },
-            { "id": "applyRibbonTomorrow", "type": "executeFunction" }
+            { "id": "applyRibbonTomorrow", "type": "executeFunction" },
+            { "id": "applyClearSchedule", "type": "executeFunction" }
           ]
         },
         {
@@ -202,6 +203,21 @@
                         "description": "Choose tomorrow 08:00 local. The time is applied when you press Send."
                       },
                       "actionId": "applyRibbonTomorrow"
+                    },
+                    {
+                      "id": "btnClearSchedule",
+                      "type": "button",
+                      "label": "Clear schedule",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "Clear schedule",
+                        "description": "Clear the chosen delay so this message sends immediately."
+                      },
+                      "actionId": "applyClearSchedule"
                     },
                     {
                       "id": "btnEditTimes",

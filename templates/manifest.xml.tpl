@@ -7,7 +7,7 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a91-6e4b-4d17-9c58-2a7f0d1b6e44</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.1.0</Version>
   <ProviderName>Innovation Schoolwear</ProviderName>
   <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="Quick Schedule Send" />
@@ -138,6 +138,21 @@
                       <FunctionName>applyRibbonTomorrow</FunctionName>
                     </Action>
                   </Control>
+                  <Control xsi:type="Button" id="btnClearSchedule">
+                    <Label resid="BtnClear.Label" />
+                    <Supertip>
+                      <Title resid="BtnClear.Label" />
+                      <Description resid="BtnClear.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16" />
+                      <bt:Image size="32" resid="Icon.32x32" />
+                      <bt:Image size="80" resid="Icon.80x80" />
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>applyClearSchedule</FunctionName>
+                    </Action>
+                  </Control>
                   <Control xsi:type="Button" id="btnEditTimes">
                     <Label resid="BtnEdit.Label" />
                     <Supertip>
@@ -187,6 +202,7 @@
           <bt:String id="Btn3h.Label" DefaultValue="3h" />
           <bt:String id="Btn4h.Label" DefaultValue="4h" />
           <bt:String id="BtnTmr.Label" DefaultValue="Tomorrow 8am" />
+          <bt:String id="BtnClear.Label" DefaultValue="Clear schedule" />
           <bt:String id="BtnEdit.Label" DefaultValue="Edit times" />
         </bt:ShortStrings>
         <bt:LongStrings>
@@ -195,6 +211,7 @@
           <bt:String id="Btn3h.Tip" DefaultValue="Choose a 3 hour delay. The clock starts when you press Send." />
           <bt:String id="Btn4h.Tip" DefaultValue="Choose a 4 hour delay. The clock starts when you press Send." />
           <bt:String id="BtnTmr.Tip" DefaultValue="Choose tomorrow 08:00 local. The time is applied when you press Send." />
+          <bt:String id="BtnClear.Tip" DefaultValue="Clear the chosen delay so this message sends immediately." />
           <bt:String id="BtnEdit.Tip" DefaultValue="Edit your schedule-send buttons and clear the delay on this message." />
         </bt:LongStrings>
       </Resources>

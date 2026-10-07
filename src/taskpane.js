@@ -348,7 +348,13 @@
     });
   }
 
+  var booted = false;
+
   function startPreview() {
+    if (booted) {
+      return;
+    }
+    booted = true;
     inOffice = false;
     els.banner.dataset.show = "true";
     presets = readPresets();
@@ -360,7 +366,12 @@
   }
 
   function startOffice() {
+    if (booted && inOffice) {
+      return;
+    }
+    booted = true;
     inOffice = true;
+    els.banner.dataset.show = "false";
     try {
       presets = readPresets();
       els.editorState.textContent = "";
@@ -369,9 +380,13 @@
       refreshCurrent();
       resetForm();
     } catch (e) {
+      presets = QS.normalizePresets(QS.DEFAULT_PRESETS);
+      renderQuickButtons();
+      renderEditor();
+      resetForm();
       els.editorState.className = "error";
-      els.editorState.textContent = "Could not load mailbox settings. " + e.message;
-      setStatus("error", "Outlook APIs are unavailable on this item.");
+      els.editorState.textContent = "Could not load mailbox settings. Showing defaults. " + e.message;
+      setStatus("error", "Could not read this draft’s schedule. You can still choose a delay.");
     }
 
     try {
@@ -403,10 +418,10 @@
       }
     });
     window.setTimeout(function () {
-      if (!inOffice && els.status.textContent.indexOf("Loading") === 0) {
+      if (!booted) {
         startPreview();
       }
-    }, 1800);
+    }, 4000);
   } else {
     startPreview();
   }
