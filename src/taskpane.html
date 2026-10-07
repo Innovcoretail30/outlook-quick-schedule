@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quick Schedule Send</title>
+    <link rel="stylesheet" href="taskpane.css" />
+    <link rel="icon" href="assets/icon-32.png" />
+    <script>
+      window.__qsInOffice = /[?&]_host_Info=/i.test(location.search);
+      if (window.__qsInOffice) {
+        document.write(
+          '<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"><\/script>'
+        );
+      }
+    </script>
+  </head>
+  <body>
+    <main class="app">
+      <div id="previewBanner" class="banner">
+        Browser preview — presets save in this browser. In Outlook, they roam with your mailbox and the delay is applied when you press Send.
+      </div>
+
+      <header class="header">
+        <img src="assets/icon-64.png" alt="" width="40" height="40" />
+        <div>
+          <h1>Quick Schedule Send</h1>
+          <p>Innovation Schoolwear · Europe/London</p>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="this-message">
+        <h2 id="this-message">This message</h2>
+        <p class="help">Clicking a time only chooses the delay. Outlook applies it when you press Send.</p>
+        <div id="currentStatus" class="status" data-state="empty">Loading this message…</div>
+        <div id="quickButtons" class="preset-grid" aria-live="polite"></div>
+        <div class="row-actions">
+          <button type="button" id="clearBtn" class="btn danger">Clear schedule</button>
+        </div>
+        <p id="actionToast" class="toast" role="status"></p>
+      </section>
+
+      <section class="card" aria-labelledby="edit-buttons">
+        <h2 id="edit-buttons">Edit my buttons</h2>
+        <p class="help">
+          Saved for you across Outlook (roaming settings). These labels appear on the task pane.
+          Ribbon captions stay 1h, 2h, 3h, 4h and Tomorrow 8am — those slots use your first five saved presets in this order.
+        </p>
+        <div id="editorState" class="loading">Loading your presets…</div>
+        <ul id="presetList" class="preset-list"></ul>
+
+        <form id="presetForm" class="form-grid" hidden>
+          <label>
+            Button label
+            <input id="fieldLabel" name="label" maxlength="32" required placeholder="e.g. 90 min" />
+          </label>
+          <label>
+            Delay type
+            <select id="fieldKind" name="kind">
+              <option value="offset">Plus hours / minutes</option>
+              <option value="tomorrow">Tomorrow at a clock time</option>
+            </select>
+          </label>
+          <div id="offsetFields" class="split">
+            <label>
+              Hours
+              <input id="fieldHours" name="hours" type="number" min="0" max="336" value="1" />
+            </label>
+            <label>
+              Minutes
+              <input id="fieldMinutes" name="minutes" type="number" min="0" max="59" value="0" />
+            </label>
+          </div>
+          <div id="tomorrowFields" class="split" hidden>
+            <label>
+              Hour
+              <input id="fieldHour" name="hour" type="number" min="0" max="23" value="8" />
+            </label>
+            <label>
+              Minute
+              <input id="fieldMinute" name="minute" type="number" min="0" max="59" value="0" />
+            </label>
+          </div>
+          <div class="row-actions">
+            <button type="submit" class="btn" id="saveItemBtn">Add button</button>
+            <button type="button" class="btn secondary" id="cancelEditBtn" hidden>Cancel</button>
+          </div>
+        </form>
+
+        <div class="row-actions">
+          <button type="button" class="btn secondary" id="addNewBtn">Add a button</button>
+          <button type="button" class="btn" id="saveAllBtn">Save</button>
+          <button type="button" class="btn secondary" id="restoreBtn">Restore defaults</button>
+        </div>
+        <p id="saveToast" class="toast" role="status"></p>
+      </section>
+
+      <p class="footer-note">
+        The delay is stored on this draft and calculated at Send, so a 2h click at 09:00 still means “two hours after Send”, not 11:00.
+      </p>
+    </main>
+    <script src="lib/delay.js"></script>
+    <script src="lib/office-schedule.js"></script>
+    <script src="taskpane.js"></script>
+  </body>
+</html>

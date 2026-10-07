@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+
+  <Id>8f3c2a91-6e4b-4d17-9c58-2a7f0d1b6e44</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Innovation Schoolwear</ProviderName>
+  <DefaultLocale>en-GB</DefaultLocale>
+  <DisplayName DefaultValue="Quick Schedule Send" />
+  <Description DefaultValue="One-click schedule-send delays in compose. You choose the delay; Outlook applies it when you press Send." />
+  <IconUrl DefaultValue="{{HOST}}/assets/icon-80.png" />
+  <HighResolutionIconUrl DefaultValue="{{HOST}}/assets/icon-128.png" />
+  <SupportUrl DefaultValue="{{HOST}}/support.html" />
+  <AppDomains>
+    <AppDomain>{{HOST_ORIGIN}}</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.13" />
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="{{HOST}}/taskpane.html" />
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit" />
+  </Rule>
+  <DisableEntityHighlighting>true</DisableEntityHighlighting>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.13">
+          <bt:Set Name="Mailbox" />
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <Runtimes>
+            <Runtime resid="WebViewRuntime.Url">
+              <Override type="javascript" resid="JSRuntime.Url" />
+            </Runtime>
+          </Runtimes>
+          <DesktopFormFactor>
+            <FunctionFile resid="Commands.Url" />
+            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="msgComposeScheduleSend">
+                  <Label resid="GroupLabel" />
+                  <Control xsi:type="Button" id="btn1h">
+                    <Label resid="Btn1h.Label" />
+                    <Supertip>
+                      <Title resid="Btn1h.Label" />
+                      <Description resid="Btn1h.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16" />
+                      <bt:Image size="32" resid="Icon.32x32" />
+                      <bt:Image size="80" resid="Icon.80x80" />
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>applyRibbon1h</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="btn2h">
+                    <Label resid="Btn2h.Label" />
+                    <Supertip>
+                      <Title resid="Btn2h.Label" />
+                      <Description resid="Btn2h.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16" />
+                      <bt:Image size="32" resid="Icon.32x32" />
+                      <bt:Image size="80" resid="Icon.80x80" />
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>applyRibbon2h</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="btn3h">
+                    <Label resid="Btn3h.Label" />
+                    <Supertip>
+                      <Title resid="Btn3h.Label" />
+                      <Description resid="Btn3h.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16" />
+                      <bt:Image size="32" resid="Icon.32x32" />
+                      <bt:Image size="80" resid="Icon.80x80" />
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>applyRibbon3h</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="btn4h">
+                    <Label resid="Btn4h.Label" />
+                    <Supertip>
+                      <Title resid="Btn4h.Label" />
+                      <Description resid="Btn4h.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16" />
+                      <bt:Image size="32" resid="Icon.32x32" />
+                      <bt:Image size="80" resid="Icon.80x80" />
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>applyRibbon4h</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="btnTomorrow">
+                    <Label resid="BtnTmr.Label" />
+                    <Supertip>
+                      <Title resid="BtnTmr.Label" />
+                      <Description resid="BtnTmr.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16" />
+                      <bt:Image size="32" resid="Icon.32x32" />
+                      <bt:Image size="80" resid="Icon.80x80" />
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>applyRibbonTomorrow</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="btnEditTimes">
+                    <Label resid="BtnEdit.Label" />
+                    <Supertip>
+                      <Title resid="BtnEdit.Label" />
+                      <Description resid="BtnEdit.Tip" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Gear.16x16" />
+                      <bt:Image size="32" resid="Gear.32x32" />
+                      <bt:Image size="80" resid="Gear.80x80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Taskpane.Url" />
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="LaunchEvent">
+              <LaunchEvents>
+                <LaunchEvent Type="OnMessageSend" FunctionName="onMessageSendHandler" SendMode="PromptUser" />
+              </LaunchEvents>
+              <SourceLocation resid="WebViewRuntime.Url" />
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16x16" DefaultValue="{{HOST}}/assets/icon-16.png" />
+          <bt:Image id="Icon.32x32" DefaultValue="{{HOST}}/assets/icon-32.png" />
+          <bt:Image id="Icon.80x80" DefaultValue="{{HOST}}/assets/icon-80.png" />
+          <bt:Image id="Gear.16x16" DefaultValue="{{HOST}}/assets/icon-gear-16.png" />
+          <bt:Image id="Gear.32x32" DefaultValue="{{HOST}}/assets/icon-gear-32.png" />
+          <bt:Image id="Gear.80x80" DefaultValue="{{HOST}}/assets/icon-gear-80.png" />
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Commands.Url" DefaultValue="{{HOST}}/commands.html" />
+          <bt:Url id="Taskpane.Url" DefaultValue="{{HOST}}/taskpane.html" />
+          <bt:Url id="WebViewRuntime.Url" DefaultValue="{{HOST}}/commands.html" />
+          <bt:Url id="JSRuntime.Url" DefaultValue="{{HOST}}/launchevent.js" />
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="GroupLabel" DefaultValue="Schedule send" />
+          <bt:String id="Btn1h.Label" DefaultValue="1h" />
+          <bt:String id="Btn2h.Label" DefaultValue="2h" />
+          <bt:String id="Btn3h.Label" DefaultValue="3h" />
+          <bt:String id="Btn4h.Label" DefaultValue="4h" />
+          <bt:String id="BtnTmr.Label" DefaultValue="Tomorrow 8am" />
+          <bt:String id="BtnEdit.Label" DefaultValue="Edit times" />
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="Btn1h.Tip" DefaultValue="Choose a 1 hour delay. The clock starts when you press Send." />
+          <bt:String id="Btn2h.Tip" DefaultValue="Choose a 2 hour delay. The clock starts when you press Send." />
+          <bt:String id="Btn3h.Tip" DefaultValue="Choose a 3 hour delay. The clock starts when you press Send." />
+          <bt:String id="Btn4h.Tip" DefaultValue="Choose a 4 hour delay. The clock starts when you press Send." />
+          <bt:String id="BtnTmr.Tip" DefaultValue="Choose tomorrow 08:00 local. The time is applied when you press Send." />
+          <bt:String id="BtnEdit.Tip" DefaultValue="Edit your schedule-send buttons and clear the delay on this message." />
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

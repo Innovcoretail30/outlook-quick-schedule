@@ -1,0 +1,20 @@
+{
+  "name": "quick-schedule-send",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Outlook add-in: choose a send delay in compose; the delay is applied when you press Send.",
+  "license": "MIT",
+  "scripts": {
+    "set-host": "node scripts/set-host.mjs",
+    "build": "node scripts/set-host.mjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "test": "node --test tests/*.test.js",
+    "validate": "npx --yes office-addin-manifest validate manifest.xml",
+    "validate:json": "npx --yes office-addin-manifest validate manifest.json",
+    "start": "npx --yes serve src -l 43173 --no-port-switching",
+    "preview": "npm start"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

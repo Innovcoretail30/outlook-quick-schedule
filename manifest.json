@@ -1,0 +1,252 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.24/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.24",
+  "version": "1.0.0",
+  "id": "8f3c2a91-6e4b-4d17-9c58-2a7f0d1b6e44",
+  "developer": {
+    "name": "Innovation Schoolwear",
+    "websiteUrl": "https://innovcoretail30.github.io/outlook-quick-schedule/",
+    "privacyUrl": "https://innovcoretail30.github.io/outlook-quick-schedule/privacy.html",
+    "termsOfUseUrl": "https://innovcoretail30.github.io/outlook-quick-schedule/terms.html"
+  },
+  "name": {
+    "short": "Quick Schedule Send",
+    "full": "Quick Schedule Send"
+  },
+  "description": {
+    "short": "Choose a send delay; it starts when you press Send.",
+    "full": "One-click schedule-send delays in Outlook compose for Innovation Schoolwear. You choose 1h, 2h, 3h, 4h, tomorrow 8am, or your own presets. The delay is applied with item.delayDeliveryTime when you press Send, not when you click the button."
+  },
+  "icons": {
+    "outline": "assets/outline.png",
+    "color": "assets/color.png"
+  },
+  "accentColor": "#0F6CBD",
+  "localizationInfo": {
+    "defaultLanguageTag": "en-GB"
+  },
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "name": "Mailbox.ReadWrite.User",
+          "type": "Delegated"
+        }
+      ]
+    }
+  },
+  "validDomains": [
+    "innovcoretail30.github.io"
+  ],
+  "extensions": [
+    {
+      "requirements": {
+        "scopes": ["mail"],
+        "capabilities": [
+          {
+            "name": "Mailbox",
+            "minVersion": "1.13"
+          }
+        ]
+      },
+      "runtimes": [
+        {
+          "requirements": {
+            "capabilities": [
+              {
+                "name": "Mailbox",
+                "minVersion": "1.13"
+              }
+            ]
+          },
+          "id": "commandsRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://innovcoretail30.github.io/outlook-quick-schedule/commands.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            { "id": "applyRibbon1h", "type": "executeFunction" },
+            { "id": "applyRibbon2h", "type": "executeFunction" },
+            { "id": "applyRibbon3h", "type": "executeFunction" },
+            { "id": "applyRibbon4h", "type": "executeFunction" },
+            { "id": "applyRibbonTomorrow", "type": "executeFunction" }
+          ]
+        },
+        {
+          "id": "taskpaneRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://innovcoretail30.github.io/outlook-quick-schedule/taskpane.html"
+          },
+          "lifetime": "long",
+          "actions": [
+            {
+              "id": "TaskpaneButton",
+              "type": "openPage",
+              "pinnable": false
+            }
+          ]
+        },
+        {
+          "requirements": {
+            "capabilities": [
+              {
+                "name": "Mailbox",
+                "minVersion": "1.13"
+              }
+            ]
+          },
+          "id": "autorunRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://innovcoretail30.github.io/outlook-quick-schedule/commands.html",
+            "script": "https://innovcoretail30.github.io/outlook-quick-schedule/launchevent.js"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "onMessageSendHandler",
+              "type": "executeFunction"
+            }
+          ]
+        }
+      ],
+      "ribbons": [
+        {
+          "contexts": ["mailCompose"],
+          "tabs": [
+            {
+              "builtInTabId": "TabDefault",
+              "groups": [
+                {
+                  "id": "msgComposeScheduleSend",
+                  "label": "Schedule send",
+                  "icons": [
+                    { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                    { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                    { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                  ],
+                  "controls": [
+                    {
+                      "id": "btn1h",
+                      "type": "button",
+                      "label": "1h",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "1h",
+                        "description": "Choose a 1 hour delay. The clock starts when you press Send."
+                      },
+                      "actionId": "applyRibbon1h"
+                    },
+                    {
+                      "id": "btn2h",
+                      "type": "button",
+                      "label": "2h",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "2h",
+                        "description": "Choose a 2 hour delay. The clock starts when you press Send."
+                      },
+                      "actionId": "applyRibbon2h"
+                    },
+                    {
+                      "id": "btn3h",
+                      "type": "button",
+                      "label": "3h",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "3h",
+                        "description": "Choose a 3 hour delay. The clock starts when you press Send."
+                      },
+                      "actionId": "applyRibbon3h"
+                    },
+                    {
+                      "id": "btn4h",
+                      "type": "button",
+                      "label": "4h",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "4h",
+                        "description": "Choose a 4 hour delay. The clock starts when you press Send."
+                      },
+                      "actionId": "applyRibbon4h"
+                    },
+                    {
+                      "id": "btnTomorrow",
+                      "type": "button",
+                      "label": "Tomorrow 8am",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "Tomorrow 8am",
+                        "description": "Choose tomorrow 08:00 local. The time is applied when you press Send."
+                      },
+                      "actionId": "applyRibbonTomorrow"
+                    },
+                    {
+                      "id": "btnEditTimes",
+                      "type": "button",
+                      "label": "Edit times",
+                      "icons": [
+                        { "size": 16, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-gear-16.png" },
+                        { "size": 32, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-gear-32.png" },
+                        { "size": 80, "url": "https://innovcoretail30.github.io/outlook-quick-schedule/assets/icon-gear-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "Edit times",
+                        "description": "Edit your schedule-send buttons and clear the delay on this message."
+                      },
+                      "actionId": "TaskpaneButton"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "autoRunEvents": [
+        {
+          "requirements": {
+            "capabilities": [
+              {
+                "name": "Mailbox",
+                "minVersion": "1.13"
+              }
+            ],
+            "scopes": ["mail"]
+          },
+          "events": [
+            {
+              "type": "messageSending",
+              "actionId": "onMessageSendHandler",
+              "options": {
+                "sendMode": "promptUser"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
