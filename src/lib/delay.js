@@ -237,26 +237,79 @@
     return parts.join(" ");
   }
 
-  function describeSchedule(preset) {
+  var NOTIFY_MAX = 150;
+  var DRAFT_HINT = "To change after sending: open it from Drafts.";
+  var CLEARED_MESSAGE = "Schedule cleared, will send immediately";
+
+  function formatLocalHm(date) {
+    return pad2(date.getHours()) + ":" + pad2(date.getMinutes());
+  }
+
+  function formatLocalTomorrow(now) {
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    var weekday = d.toLocaleDateString("en-GB", { weekday: "short" });
+    var month = d.toLocaleDateString("en-GB", { month: "short" });
+    return weekday + " " + d.getDate() + " " + month;
+  }
+
+  function packNotification(line1, line2) {
+    var options = [
+      line1 + "\n" + line2,
+      line1 + " " + line2,
+      line1 + "\nChange later: open from Drafts.",
+      line1 + " Change later: open from Drafts.",
+      line1
+    ];
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].length <= NOTIFY_MAX) {
+        return options[i];
+      }
+    }
+    return line1.slice(0, NOTIFY_MAX);
+  }
+
+  function describeScheduledBar(preset, now) {
     var clean = normalizePreset(preset);
     if (!clean) {
       return {
         message: "No send delay selected.",
-        summary: "None"
+        line1: "No send delay selected.",
+        summary: "None",
+        persistent: false
       };
     }
+    var when = now instanceof Date ? now : new Date(now || Date.now());
+    var line1;
+    var summary;
     if (clean.kind === "offset") {
       var human = humanOffset(clean.hours, clean.minutes);
-      return {
-        message: "Will send " + human + " after you press Send",
-        summary: human + " after Send"
-      };
+      var about = formatLocalHm(addOffset(when, clean.hours, clean.minutes));
+      line1 =
+        "Scheduled: sends " +
+        human +
+        " after you press Send (about " +
+        about +
+        " if you send now)";
+      summary = human + " after Send";
+    } else {
+      var clock = pad2(clean.hour) + ":" + pad2(clean.minute);
+      line1 =
+        "Scheduled: sends tomorrow (" +
+        formatLocalTomorrow(when) +
+        ") at " +
+        clock;
+      summary = "Tomorrow " + clock + " after Send";
     }
-    var clock = pad2(clean.hour) + ":" + pad2(clean.minute);
     return {
-      message: "Will send tomorrow at " + clock + " after you press Send",
-      summary: "Tomorrow " + clock + " after Send"
+      message: packNotification(line1, DRAFT_HINT),
+      line1: line1,
+      summary: summary,
+      persistent: true
     };
+  }
+
+  function describeSchedule(preset, now) {
+    return describeScheduledBar(preset, now);
   }
 
   function resolveTimeZone(officeTimeZone) {
@@ -315,6 +368,13 @@
     tomorrowAt: tomorrowAt,
     applyPresetToDate: applyPresetToDate,
     describeSchedule: describeSchedule,
+    describeScheduledBar: describeScheduledBar,
+    packNotification: packNotification,
+    formatLocalHm: formatLocalHm,
+    formatLocalTomorrow: formatLocalTomorrow,
+    NOTIFY_MAX: NOTIFY_MAX,
+    DRAFT_HINT: DRAFT_HINT,
+    CLEARED_MESSAGE: CLEARED_MESSAGE,
     humanOffset: humanOffset,
     resolveTimeZone: resolveTimeZone,
     serializeSchedule: serializeSchedule,

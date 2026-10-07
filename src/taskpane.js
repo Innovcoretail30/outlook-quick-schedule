@@ -113,12 +113,17 @@
         els.clearBtn.disabled = true;
         return;
       }
-      setStatus("ok", QS.describeSchedule(preset).message + ".");
+      setStatus("ok", QS.describeScheduledBar(preset, new Date()).message);
       els.clearBtn.disabled = false;
     }
 
     if (inOffice) {
-      QuickScheduleOffice.readSchedule(paint);
+      QuickScheduleOffice.readSchedule(function (preset) {
+        paint(preset);
+        if (preset) {
+          QuickScheduleOffice.restoreScheduledNotification();
+        }
+      });
       return;
     }
     try {
@@ -136,7 +141,7 @@
           return;
         }
         currentPreset = clean;
-        setStatus("ok", QS.describeSchedule(clean).message + ".");
+        setStatus("ok", QS.describeScheduledBar(clean, new Date()).message);
         els.clearBtn.disabled = false;
         showToast(els.actionToast, "Delay chosen. Press Send when the message is ready.");
       });
@@ -152,7 +157,7 @@
     if (inOffice) {
       QuickScheduleOffice.clearSchedule(function () {
         currentPreset = null;
-        setStatus("empty", "Schedule cleared. This message will send immediately.");
+        setStatus("empty", QS.CLEARED_MESSAGE);
         els.clearBtn.disabled = true;
         showToast(els.actionToast, "Schedule cleared.");
       });

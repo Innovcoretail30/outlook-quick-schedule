@@ -110,6 +110,7 @@ body {
   color: var(--brand-pressed);
   margin-bottom: 12px;
   font-weight: 600;
+  white-space: pre-wrap;
 }
 
 .status[data-state="empty"] {

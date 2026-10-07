@@ -238,26 +238,79 @@
     return parts.join(" ");
   }
 
-  function describeSchedule(preset) {
+  var NOTIFY_MAX = 150;
+  var DRAFT_HINT = "To change after sending: open it from Drafts.";
+  var CLEARED_MESSAGE = "Schedule cleared, will send immediately";
+
+  function formatLocalHm(date) {
+    return pad2(date.getHours()) + ":" + pad2(date.getMinutes());
+  }
+
+  function formatLocalTomorrow(now) {
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    var weekday = d.toLocaleDateString("en-GB", { weekday: "short" });
+    var month = d.toLocaleDateString("en-GB", { month: "short" });
+    return weekday + " " + d.getDate() + " " + month;
+  }
+
+  function packNotification(line1, line2) {
+    var options = [
+      line1 + "\n" + line2,
+      line1 + " " + line2,
+      line1 + "\nChange later: open from Drafts.",
+      line1 + " Change later: open from Drafts.",
+      line1
+    ];
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].length <= NOTIFY_MAX) {
+        return options[i];
+      }
+    }
+    return line1.slice(0, NOTIFY_MAX);
+  }
+
+  function describeScheduledBar(preset, now) {
     var clean = normalizePreset(preset);
     if (!clean) {
       return {
         message: "No send delay selected.",
-        summary: "None"
+        line1: "No send delay selected.",
+        summary: "None",
+        persistent: false
       };
     }
+    var when = now instanceof Date ? now : new Date(now || Date.now());
+    var line1;
+    var summary;
     if (clean.kind === "offset") {
       var human = humanOffset(clean.hours, clean.minutes);
-      return {
-        message: "Will send " + human + " after you press Send",
-        summary: human + " after Send"
-      };
+      var about = formatLocalHm(addOffset(when, clean.hours, clean.minutes));
+      line1 =
+        "Scheduled: sends " +
+        human +
+        " after you press Send (about " +
+        about +
+        " if you send now)";
+      summary = human + " after Send";
+    } else {
+      var clock = pad2(clean.hour) + ":" + pad2(clean.minute);
+      line1 =
+        "Scheduled: sends tomorrow (" +
+        formatLocalTomorrow(when) +
+        ") at " +
+        clock;
+      summary = "Tomorrow " + clock + " after Send";
     }
-    var clock = pad2(clean.hour) + ":" + pad2(clean.minute);
     return {
-      message: "Will send tomorrow at " + clock + " after you press Send",
-      summary: "Tomorrow " + clock + " after Send"
+      message: packNotification(line1, DRAFT_HINT),
+      line1: line1,
+      summary: summary,
+      persistent: true
     };
+  }
+
+  function describeSchedule(preset, now) {
+    return describeScheduledBar(preset, now);
   }
 
   function resolveTimeZone(officeTimeZone) {
@@ -316,6 +369,13 @@
     tomorrowAt: tomorrowAt,
     applyPresetToDate: applyPresetToDate,
     describeSchedule: describeSchedule,
+    describeScheduledBar: describeScheduledBar,
+    packNotification: packNotification,
+    formatLocalHm: formatLocalHm,
+    formatLocalTomorrow: formatLocalTomorrow,
+    NOTIFY_MAX: NOTIFY_MAX,
+    DRAFT_HINT: DRAFT_HINT,
+    CLEARED_MESSAGE: CLEARED_MESSAGE,
     humanOffset: humanOffset,
     resolveTimeZone: resolveTimeZone,
     serializeSchedule: serializeSchedule,
@@ -337,7 +397,7 @@
   }
 
   var NOTIFY_ICON = "Icon.16x16";
-  var CLEARED_MESSAGE = "Schedule cleared — will send immediately";
+  var CLEARED_MESSAGE = QS.CLEARED_MESSAGE;
 
   function later(fn, ms) {
     var t = typeof setTimeout === "function" ? setTimeout : null;
@@ -526,15 +586,15 @@
     );
   }
 
-  function replaceInfoNotification(item, message, done) {
+  function replaceInfoNotification(item, message, persistent, done) {
     try {
       item.notificationMessages.replaceAsync(
         QS.NOTIFICATION_KEY,
         {
           type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
-          message: String(message).slice(0, 150),
+          message: String(message).slice(0, QS.NOTIFY_MAX),
           icon: NOTIFY_ICON,
-          persistent: true
+          persistent: persistent !== false
         },
         function () {
           if (done) {
@@ -558,40 +618,8 @@
           done();
           return;
         }
-        var copy = QS.describeSchedule(preset);
-        replaceInfoNotification(item, copy.message, function () {
-          if (!mailboxSet("1.10") || !Office.MailboxEnums.ActionType) {
-            done();
-            return;
-          }
-          try {
-            item.notificationMessages.replaceAsync(
-              QS.NOTIFICATION_KEY,
-              {
-                type: Office.MailboxEnums.ItemNotificationMessageType.InsightMessage,
-                message: copy.message.slice(0, 150),
-                icon: NOTIFY_ICON,
-                actions: [
-                  {
-                    actionText: "Clear schedule",
-                    actionType: Office.MailboxEnums.ActionType.ShowTaskPane,
-                    commandId: "btnEditTimes",
-                    contextData: { action: "clear" }
-                  }
-                ]
-              },
-              function (result) {
-                if (result && result.status === Office.AsyncResultStatus.Failed) {
-                  replaceInfoNotification(item, copy.message, done);
-                  return;
-                }
-                done();
-              }
-            );
-          } catch (e) {
-            done();
-          }
-        });
+        var copy = QS.describeScheduledBar(preset, new Date());
+        replaceInfoNotification(item, copy.message, true, done);
       },
       function () {
         done();
@@ -608,12 +636,28 @@
           done();
           return;
         }
-        replaceInfoNotification(item, CLEARED_MESSAGE, done);
+        replaceInfoNotification(item, CLEARED_MESSAGE, false, done);
       },
       function () {
         done();
       }
     );
+  }
+
+  function restoreScheduledNotification(callback) {
+    readSchedule(function (preset) {
+      if (!preset) {
+        if (callback) {
+          callback(null);
+        }
+        return;
+      }
+      showChosenNotification(preset, function () {
+        if (callback) {
+          callback(preset);
+        }
+      });
+    });
   }
 
   function clearDelayDeliveryTime(callback) {
@@ -824,6 +868,7 @@
     clearSchedule: clearSchedule,
     showChosenNotification: showChosenNotification,
     showClearedNotification: showClearedNotification,
+    restoreScheduledNotification: restoreScheduledNotification,
     readRoamingPresets: readRoamingPresets,
     saveRoamingPresets: saveRoamingPresets,
     applyDelayOnSend: applyDelayOnSend,

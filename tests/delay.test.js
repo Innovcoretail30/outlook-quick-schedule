@@ -113,15 +113,40 @@ describe("UK DST — BST / GMT change", () => {
 });
 
 describe("copy and validation", () => {
-  it("describes offset and tomorrow presets", () => {
-    assert.equal(
-      qs.describeSchedule({ label: "2h", kind: "offset", hours: 2, minutes: 0 }).message,
-      "Will send 2 hours after you press Send"
+  it("describes a relative delay with the local clock and a Drafts hint", () => {
+    const now = new Date(2026, 9, 7, 10, 19, 0);
+    const bar = qs.describeScheduledBar(
+      { label: "2h", kind: "offset", hours: 2, minutes: 0 },
+      now
     );
     assert.equal(
-      qs.describeSchedule({ label: "Tomorrow 8am", kind: "tomorrow", hour: 8, minute: 0 }).message,
-      "Will send tomorrow at 08:00 after you press Send"
+      bar.line1,
+      "Scheduled: sends 2 hours after you press Send (about 12:19 if you send now)"
     );
+    assert.ok(bar.message.includes(bar.line1));
+    assert.ok(bar.message.includes("To change after sending: open it from Drafts."));
+    assert.ok(bar.message.length <= qs.NOTIFY_MAX);
+    assert.equal(bar.persistent, true);
+  });
+
+  it("describes tomorrow 8am with the next local weekday and date", () => {
+    const now = new Date(2026, 9, 7, 15, 0, 0);
+    const bar = qs.describeScheduledBar(
+      { label: "Tomorrow 8am", kind: "tomorrow", hour: 8, minute: 0 },
+      now
+    );
+    assert.equal(bar.line1, "Scheduled: sends tomorrow (Thu 8 Oct) at 08:00");
+    assert.ok(bar.message.includes("To change after sending: open it from Drafts."));
+    assert.ok(bar.message.length <= qs.NOTIFY_MAX);
+  });
+
+  it("keeps the scheduled bar under the 150-character notification limit", () => {
+    const now = new Date(2026, 9, 7, 10, 19, 0);
+    const long = qs.describeScheduledBar(
+      { label: "long", kind: "offset", hours: 336, minutes: 59 },
+      now
+    );
+    assert.ok(long.message.length <= 150);
   });
 
   it("rejects a zero-length offset", () => {

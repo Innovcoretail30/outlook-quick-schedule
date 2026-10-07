@@ -11,7 +11,7 @@
   }
 
   var NOTIFY_ICON = "Icon.16x16";
-  var CLEARED_MESSAGE = "Schedule cleared — will send immediately";
+  var CLEARED_MESSAGE = QS.CLEARED_MESSAGE;
 
   function later(fn, ms) {
     var t = typeof setTimeout === "function" ? setTimeout : null;
@@ -200,15 +200,15 @@
     );
   }
 
-  function replaceInfoNotification(item, message, done) {
+  function replaceInfoNotification(item, message, persistent, done) {
     try {
       item.notificationMessages.replaceAsync(
         QS.NOTIFICATION_KEY,
         {
           type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
-          message: String(message).slice(0, 150),
+          message: String(message).slice(0, QS.NOTIFY_MAX),
           icon: NOTIFY_ICON,
-          persistent: true
+          persistent: persistent !== false
         },
         function () {
           if (done) {
@@ -232,40 +232,8 @@
           done();
           return;
         }
-        var copy = QS.describeSchedule(preset);
-        replaceInfoNotification(item, copy.message, function () {
-          if (!mailboxSet("1.10") || !Office.MailboxEnums.ActionType) {
-            done();
-            return;
-          }
-          try {
-            item.notificationMessages.replaceAsync(
-              QS.NOTIFICATION_KEY,
-              {
-                type: Office.MailboxEnums.ItemNotificationMessageType.InsightMessage,
-                message: copy.message.slice(0, 150),
-                icon: NOTIFY_ICON,
-                actions: [
-                  {
-                    actionText: "Clear schedule",
-                    actionType: Office.MailboxEnums.ActionType.ShowTaskPane,
-                    commandId: "btnEditTimes",
-                    contextData: { action: "clear" }
-                  }
-                ]
-              },
-              function (result) {
-                if (result && result.status === Office.AsyncResultStatus.Failed) {
-                  replaceInfoNotification(item, copy.message, done);
-                  return;
-                }
-                done();
-              }
-            );
-          } catch (e) {
-            done();
-          }
-        });
+        var copy = QS.describeScheduledBar(preset, new Date());
+        replaceInfoNotification(item, copy.message, true, done);
       },
       function () {
         done();
@@ -282,12 +250,28 @@
           done();
           return;
         }
-        replaceInfoNotification(item, CLEARED_MESSAGE, done);
+        replaceInfoNotification(item, CLEARED_MESSAGE, false, done);
       },
       function () {
         done();
       }
     );
+  }
+
+  function restoreScheduledNotification(callback) {
+    readSchedule(function (preset) {
+      if (!preset) {
+        if (callback) {
+          callback(null);
+        }
+        return;
+      }
+      showChosenNotification(preset, function () {
+        if (callback) {
+          callback(preset);
+        }
+      });
+    });
   }
 
   function clearDelayDeliveryTime(callback) {
@@ -498,6 +482,7 @@
     clearSchedule: clearSchedule,
     showChosenNotification: showChosenNotification,
     showClearedNotification: showClearedNotification,
+    restoreScheduledNotification: restoreScheduledNotification,
     readRoamingPresets: readRoamingPresets,
     saveRoamingPresets: saveRoamingPresets,
     applyDelayOnSend: applyDelayOnSend,

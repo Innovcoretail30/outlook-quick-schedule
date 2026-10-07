@@ -7,7 +7,7 @@
   xsi:type="MailApp">
 
   <Id>8f3c2a91-6e4b-4d17-9c58-2a7f0d1b6e44</Id>
-  <Version>1.0.1.0</Version>
+  <Version>1.0.2.0</Version>
   <ProviderName>Innovation Schoolwear</ProviderName>
   <DefaultLocale>en-GB</DefaultLocale>
   <DisplayName DefaultValue="Quick Schedule Send" />
@@ -202,7 +202,7 @@
           <bt:String id="Btn3h.Label" DefaultValue="3h" />
           <bt:String id="Btn4h.Label" DefaultValue="4h" />
           <bt:String id="BtnTmr.Label" DefaultValue="Tomorrow 8am" />
-          <bt:String id="BtnClear.Label" DefaultValue="Clear schedule" />
+          <bt:String id="BtnClear.Label" DefaultValue="Send now (clear schedule)" />
           <bt:String id="BtnEdit.Label" DefaultValue="Edit times" />
         </bt:ShortStrings>
         <bt:LongStrings>
